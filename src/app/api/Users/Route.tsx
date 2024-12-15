@@ -6,9 +6,12 @@ export async function GET(request: Request) {
   const query = searchParams.get("query")
 
   try {
+    console.log("Fetching users with query:", query)
     const users = query
       ? await clerkClient.users.getUserList({ query })
       : await clerkClient.users.getUserList()
+
+    console.log("Users fetched successfully:", users.length)
 
     // Only send necessary user data
     const sanitizedUsers = users.map((user) => ({
@@ -25,7 +28,10 @@ export async function GET(request: Request) {
   } catch (error) {
     console.error("Error fetching users:", error)
     return NextResponse.json(
-      { error: "Failed to fetch users" },
+      {
+        error: "Failed to fetch users",
+        details: error instanceof Error ? error.message : String(error),
+      },
       { status: 500 }
     )
   }

@@ -1,3 +1,8 @@
+"use client"
+
+import { useEffect, useState } from "react"
+import { format } from "date-fns"
+
 import { Button } from "@/components/ui/button"
 import {
   Table,
@@ -10,24 +15,47 @@ import {
 
 interface Appointment {
   id: string
-  patientName: string
-  date: string
-  time: string
-  type: string
+  customerName: string
+  appointmentDate: string
+  serviceType: {
+    name: string
+  }
 }
 
-interface UpcomingAppointmentsProps {
-  appointments: Appointment[]
-}
+export function UpcomingAppointments() {
+  const [appointments, setAppointments] = useState<Appointment[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-export function UpcomingAppointments({
-  appointments,
-}: UpcomingAppointmentsProps) {
+  useEffect(() => {
+    const fetchAppointments = async () => {
+      try {
+        const response = await fetch("/api/appointments?type=upcoming")
+        if (!response.ok) {
+          throw new Error("Failed to fetch appointments")
+        }
+        const data = await response.json()
+        setAppointments(data)
+      } catch (err) {
+        setError("Error fetching appointments")
+        console.error(err)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchAppointments()
+  }, [])
+
+  if (isLoading) return <div>Loading appointments...</div>
+  if (error) return <div>Error: {error}</div>
+  if (appointments.length === 0) return <div>No upcoming appointments</div>
+
   return (
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead>Patient Name</TableHead>
+          <TableHead>Client Name</TableHead>
           <TableHead>Date</TableHead>
           <TableHead>Time</TableHead>
           <TableHead>Type</TableHead>
@@ -37,10 +65,14 @@ export function UpcomingAppointments({
       <TableBody>
         {appointments.map((appointment) => (
           <TableRow key={appointment.id}>
-            <TableCell>{appointment.patientName}</TableCell>
-            <TableCell>{appointment.date}</TableCell>
-            <TableCell>{appointment.time}</TableCell>
-            <TableCell>{appointment.type}</TableCell>
+            <TableCell>{appointment.customerName}</TableCell>
+            <TableCell>
+              {format(new Date(appointment.appointmentDate), "PP")}
+            </TableCell>
+            <TableCell>
+              {format(new Date(appointment.appointmentDate), "p")}
+            </TableCell>
+            <TableCell>{appointment.serviceType.name}</TableCell>
             <TableCell>
               <Button variant="outline" size="sm">
                 View Details

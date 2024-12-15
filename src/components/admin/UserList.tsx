@@ -1,64 +1,77 @@
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
+"use client"
+
+import { useEffect, useState } from "react"
+import { useSearchParams } from "next/navigation"
+
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+
+import { UserActions } from "./UserActions"
 
 interface User {
   id: string
-  name: string
-  email: string
+  firstName: string | null
+  lastName: string | null
+  email: string | undefined
   role: string
-  status: "Active" | "Inactive"
 }
 
-interface UserListProps {
-  users: User[]
-}
+export function UserList() {
+  const [users, setUsers] = useState<User[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const searchParams = useSearchParams()
 
-export function UserList({ users }: UserListProps) {
+  useEffect(() => {
+    async function fetchUsers() {
+      setIsLoading(true)
+      setError(null)
+      const query = searchParams.get("search")
+      const url = query
+        ? `/api/users?query=${encodeURIComponent(query)}`
+        : "/api/users"
+
+      try {
+        const response = await fetch(url)
+        if (!response.ok) {
+          throw new Error("Failed to fetch users")
+        }
+        const data = await response.json()
+        setUsers(data)
+      } catch (err) {
+        setError("An error occurred while fetching users")
+        console.error(err)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchUsers()
+  }, [searchParams])
+
+  if (isLoading) {
+    return <div>Loading users...</div>
+  }
+
+  if (error) {
+    return <div>Error: {error}</div>
+  }
+
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Name</TableHead>
-          <TableHead>Email</TableHead>
-          <TableHead>Role</TableHead>
-          <TableHead>Status</TableHead>
-          <TableHead>Actions</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {users.map((user) => (
-          <TableRow key={user.id}>
-            <TableCell>{user.name}</TableCell>
-            <TableCell>{user.email}</TableCell>
-            <TableCell>{user.role}</TableCell>
-            <TableCell>
-              <Badge
-                variant={user.status === "Active" ? "default" : "secondary"}
-              >
-                {user.status}
-              </Badge>
-            </TableCell>
-            <TableCell>
-              <div className="flex space-x-2">
-                <Button variant="outline" size="sm">
-                  Edit
-                </Button>
-                <Button variant="outline" size="sm">
-                  Delete
-                </Button>
-              </div>
-            </TableCell>
-          </TableRow>
-        ))}
-      </TableBody>
-    </Table>
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      {users.map((user) => (
+        <Card key={user.id}>
+          <CardHeader>
+            <CardTitle>
+              {user.firstName} {user.lastName}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="mb-4 text-sm text-muted-foreground">{user.email}</p>
+            <p className="mb-4 text-sm font-medium">Role: {user.role}</p>
+            <UserActions userId={user.id} currentRole={user.role} />
+          </CardContent>
+        </Card>
+      ))}
+    </div>
   )
 }

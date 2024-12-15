@@ -14,9 +14,7 @@ export function SearchUsers() {
     e.preventDefault()
     const formData = new FormData(e.currentTarget)
     const search = formData.get("search") as string
-    const params = new URLSearchParams(searchParams)
-    params.set("search", search)
-    router.push(`/admin?${params.toString()}`)
+    router.push(`/admin/users?search=${encodeURIComponent(search)}`)
   }
 
   return (

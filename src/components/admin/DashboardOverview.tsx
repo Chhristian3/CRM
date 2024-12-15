@@ -1,3 +1,8 @@
+"use client"
+
+import { useEffect, useState } from "react"
+import { format } from "date-fns"
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   Table,
@@ -8,23 +13,50 @@ import {
   TableRow,
 } from "@/components/ui/table"
 
-interface DashboardOverviewProps {
-  totalAppointments: number
-  totalUsers: number
-  upcomingAppointments: Array<{
-    id: string
-    patientName: string
-    date: string
-    time: string
-    type: string
-  }>
+interface Appointment {
+  id: string
+  customerName: string
+  appointmentDate: string
+  serviceType: {
+    name: string
+  }
 }
 
-export function DashboardOverview({
-  totalAppointments,
-  totalUsers,
-  upcomingAppointments,
-}: DashboardOverviewProps) {
+interface DashboardData {
+  totalAppointments: number
+  totalUsers: number
+  upcomingAppointments: Appointment[]
+}
+
+export function DashboardOverview() {
+  const [data, setData] = useState<DashboardData | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        const response = await fetch("/api/appointments?type=dashboard")
+        if (!response.ok) {
+          throw new Error("Failed to fetch dashboard data")
+        }
+        const dashboardData = await response.json()
+        setData(dashboardData)
+      } catch (err) {
+        setError("Error fetching dashboard data")
+        console.error(err)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchDashboardData()
+  }, [])
+
+  if (isLoading) return <div>Loading dashboard data...</div>
+  if (error) return <div>Error: {error}</div>
+  if (!data) return <div>No data available</div>
+
   return (
     <div className="grid h-full grid-rows-[auto_1fr] gap-4">
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -35,7 +67,7 @@ export function DashboardOverview({
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{totalAppointments}</div>
+            <div className="text-2xl font-bold">{data.totalAppointments}</div>
           </CardContent>
         </Card>
         <Card>
@@ -43,7 +75,7 @@ export function DashboardOverview({
             <CardTitle className="text-sm font-medium">Total Users</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{totalUsers}</div>
+            <div className="text-2xl font-bold">{data.totalUsers}</div>
           </CardContent>
         </Card>
       </div>
@@ -62,12 +94,16 @@ export function DashboardOverview({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {upcomingAppointments.map((appointment) => (
+              {data.upcomingAppointments.map((appointment) => (
                 <TableRow key={appointment.id}>
-                  <TableCell>{appointment.patientName}</TableCell>
-                  <TableCell>{appointment.date}</TableCell>
-                  <TableCell>{appointment.time}</TableCell>
-                  <TableCell>{appointment.type}</TableCell>
+                  <TableCell>{appointment.customerName}</TableCell>
+                  <TableCell>
+                    {format(new Date(appointment.appointmentDate), "PP")}
+                  </TableCell>
+                  <TableCell>
+                    {format(new Date(appointment.appointmentDate), "p")}
+                  </TableCell>
+                  <TableCell>{appointment.serviceType.name}</TableCell>
                 </TableRow>
               ))}
             </TableBody>

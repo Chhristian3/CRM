@@ -1,3 +1,4 @@
+import { Suspense } from "react"
 import { clerkClient } from "@clerk/nextjs/server"
 
 import {
@@ -7,6 +8,7 @@ import {
   BreadcrumbPage,
 } from "@/components/ui/breadcrumb"
 import { DashboardOverview } from "@/components/admin/DashboardOverview"
+import { UpcomingAppointments } from "@/components/admin/UpcomingAppointments"
 
 async function getUsers() {
   try {
@@ -17,39 +19,8 @@ async function getUsers() {
   }
 }
 
-async function getAppointments() {
-  try {
-    const response = await fetch("/api/appointments", { cache: "no-store" })
-    if (!response.ok) {
-      throw new Error("Failed to fetch appointments")
-    }
-    const appointments = await response.json()
-
-    return {
-      totalAppointments: appointments.length,
-      upcomingAppointments: appointments.slice(0, 3).map((appointment) => ({
-        id: appointment.id,
-        patientName: appointment.patientName || "N/A",
-        date: new Date(appointment.date).toISOString().split("T")[0],
-        time: new Date(appointment.date).toLocaleTimeString([], {
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
-        type: appointment.serviceType?.name || "N/A",
-      })),
-    }
-  } catch (error) {
-    console.error("Error fetching appointments:", error)
-    return {
-      totalAppointments: 0,
-      upcomingAppointments: [],
-    }
-  }
-}
-
 export default async function AdminDashboard() {
   const users = await getUsers()
-  const { totalAppointments, upcomingAppointments } = await getAppointments()
 
   return (
     <>
@@ -64,12 +35,18 @@ export default async function AdminDashboard() {
       </header>
       <main className="flex h-[calc(100vh-4rem)] flex-col p-4 pt-6 md:p-8">
         <h1 className="mb-4 text-3xl font-bold tracking-tight">Dashboard</h1>
-        <div className="min-h-0 flex-1">
-          <DashboardOverview
-            totalAppointments={totalAppointments}
-            totalUsers={users.length}
-            upcomingAppointments={upcomingAppointments}
-          />
+        <div className="min-h-0 flex-1 space-y-6">
+          <Suspense fallback={<div>Loading dashboard overview...</div>}>
+            <DashboardOverview />
+          </Suspense>
+          <div className="mt-8">
+            <h2 className="mb-4 text-2xl font-semibold">
+              Upcoming Client Appointments
+            </h2>
+            <Suspense fallback={<div>Loading upcoming appointments...</div>}>
+              <UpcomingAppointments />
+            </Suspense>
+          </div>
         </div>
       </main>
     </>
